@@ -2,512 +2,25 @@
 
 #include <iostream>
 #include <vector>
-#include <fst/ascii.h>
-#include "fst/file_buffer.h"
-#include <boost/utility/string_view.hpp>
 #include <list>
 #include <cstring>
+#include <boost/utility/string_view.hpp>
 
-template <class T> class ballocator {
-public:
-    static constexpr std::size_t BlockSize = 5000000;
-    typedef T value_type;
+#include <fst/ascii.h>
+#include "fst/file_buffer.h"
 
-    inline ballocator(const ballocator& a) {}
-
-    inline ballocator()
-    {
-        if (_buffer == nullptr) {
-            _buffer = std::unique_ptr<T>(new T[BlockSize]);
-            _begin = _buffer.get();
-            _end = _buffer.get() + BlockSize;
-            _ptr = _begin;
-        }
-    }
-
-    inline T* allocate(std::size_t n)
-    {
-        T* ptr = _ptr;
-        if (_ptr + n >= _end) {
-            throw std::bad_alloc();
-        }
-        _ptr += n;
-
-        return ptr;
-    }
-
-    void deallocate(T* p, std::size_t n) {}
-
-private:
-    static T* _begin;
-    static T* _end;
-    static T* _ptr;
-    static std::unique_ptr<T> _buffer;
-};
-
-template <typename T> T* ballocator<T>::_begin = nullptr;
-template <typename T> T* ballocator<T>::_end = nullptr;
-template <typename T> T* ballocator<T>::_ptr = nullptr;
-template <typename T> std::unique_ptr<T> ballocator<T>::_buffer = nullptr;
+#include "fst/json/node_manager.h"
+#include "fst/json/node_view.h"
+#include "fst/json/file_dimension.h"
 
 namespace fst {
 namespace json {
-        typedef std::vector<std::size_t, ballocator<std::size_t>>
-        children_vector_type;
-    //    typedef std::vector<std::size_t, ballocator<std::size_t>>
-    //    node_vector_type;
-//    typedef std::vector<std::size_t> children_vector_type;
-    typedef std::vector<std::size_t> node_vector_type;
-
-    enum class type : std::uint8_t {
-        null,
-        object,
-        array,
-        string,
-        boolean,
-        number,
-        error
-    };
-
-    enum class file_dimension : std::uint8_t { tiny, small, medium, big, huge };
-
-    enum file_dimension_size {
-        fds_tiny = 100,
-        fds_small = 500,
-        fds_medium = 1000,
-        fds_big = 10000
-    };
-
-    enum file_dimension_reserve {
-        fdr_tiny = 20,
-        fdr_small = 100,
-        fdr_medium = 500,
-        fdr_big = 1000,
-        fdr_huge = 500000
-    };
-
-    enum file_dimension_top_level_reserve {
-        fdtlr_tiny = 3,
-        fdtlr_small = 10,
-        fdtlr_medium = 20,
-        fdtlr_big = 50,
-        fdtlr_huge = 10000
-    };
-
-    namespace adaptor {
-        template <typename K, typename T> T& get(K& st, const std::string& name)
-        {
-        }
-    }
-
-    struct node {
-        node(std::size_t id, std::size_t value, type type,
-            std::size_t reserve_size = 0)
-            : id(id)
-            , value(value)
-            , type(type)
-        {
-            if (reserve_size) {
-                children.reserve(reserve_size);
-            }
-        }
-
-        node(node&& n)
-            : children(std::move(n.children))
-            , id(n.id)
-            , value(n.value)
-            , type(n.type)
-        {
-        }
-
-        node(const node&) = delete;
-        node& operator=(const node&) = delete;
-
-        children_vector_type children;
-        std::size_t id;
-        std::size_t value;
-        type type;
-    };
-
-    struct node_ref {
-        node_ref(std::size_t index, std::size_t& id, std::size_t& value,
-            type& type, children_vector_type& children)
-            : index(index)
-            , children(children)
-            , id(id)
-            , value(value)
-            , type(type)
-        {
-        }
-
-        std::size_t index;
-        children_vector_type& children;
-        std::size_t& id;
-        std::size_t& value;
-        type& type;
-    };
-
-    struct node_const_ref {
-        node_const_ref(std::size_t index, const std::size_t id,
-            const std::size_t value, const type type,
-            const children_vector_type& children)
-            : index(index)
-            , children(children)
-            , id(id)
-            , value(value)
-            , type(type)
-        {
-        }
-
-        std::size_t index;
-        const children_vector_type& children;
-        const std::size_t id;
-        const std::size_t value;
-        const type type;
-    };
-
-    class node_manager {
-    public:
-        inline void reserve(std::size_t size)
-        {
-                        id.reserve(size);
-                        value.reserve(size);
-                        type.reserve(size);
-                        children.reserve(size);
-        }
-
-        inline void emplace_back(node&& n)
-        {
-                        id.push_back(n.id);
-                        value.push_back(n.value);
-                        type.push_back(n.type);
-                        children.emplace_back(std::move(n.children));
-        }
-
-        inline  node_ref get(std::size_t index)
-        {
-            return node_ref(
-                index, id[index], value[index], type[index], children[index]);
-        }
-
-        inline  node_const_ref get(
-            std::size_t index) const
-        {
-            return node_const_ref(
-                index, id[index], value[index], type[index], children[index]);
-        }
-
-        inline  node_ref operator[](std::size_t index)
-        {
-            return get(index);
-        }
-
-        inline  node_const_ref operator[](
-            std::size_t index) const
-        {
-            return get(index);
-        }
-
-        inline  bool empty() const
-        {
-            return id.size() == 0;
-        }
-
-        inline  std::size_t size() const
-        {
-            return id.size();
-        }
-
-    private:
-        node_vector_type id;
-        node_vector_type value;
-        std::vector<type> type;
-        std::vector<children_vector_type> children;
-    };
-
-    /**
-     * node_view.
-     */
-    class node_view {
-    public:
-        inline   node_view(
-            std::size_t index, node_manager& manager,
-            std::vector<boost::string_view>& values,
-            std::list<std::string>& allocated_data, bool is_valid = true)
-            : _index(index)
-            , manager(manager)
-            , values(values)
-            , allocated_data(allocated_data)
-            , _is_valid(manager[index].type == type::error ? false : is_valid)
-        {
-        }
-
-        inline   node_view
-        operator[](const std::string& name)
-        {
-            for (auto k : manager[_index].children) {
-                if (values[manager[k].id] == name) {
-                    return node_view(k, manager, values, allocated_data);
-                }
-            }
-
-            /// @todo special case.
-            return node_view(0, manager, values, allocated_data);
-        }
-
-        inline  node_view operator[](
-            std::size_t child_index)
-        {
-            node_ref nr = manager[manager[_index].children[child_index]];
-            return node_view(nr.index, manager, values, allocated_data);
-        }
-
-        inline node_view add_object_node() { return add_node(); }
-
-        inline node_view add_object_node(std::string&& name)
-        {
-            return add_node(std::move(name), type::object);
-        }
-
-        node_view add_array_node(std::string&& name)
-        {
-            return add_node(std::move(name), type::array);
-        }
-
-        node_view add_number_node(std::string&& name, int value)
-        {
-            return add_node(
-                std::move(name), std::to_string(value), type::number);
-        }
-
-        node_view add_number_node(std::string&& name, double value)
-        {
-            return add_node(
-                std::move(name), std::to_string(value), type::number);
-        }
-
-        node_view add_number_node(double value)
-        {
-            return add_node(std::to_string(value));
-        }
-
-        node_view add_boolean_node(std::string&& name, bool value)
-        {
-            return add_node(
-                std::move(name), value ? "true" : "false", type::boolean);
-        }
-
-        node_view add_string_node(std::string&& name, std::string&& value)
-        {
-            return add_node(std::move(name), std::move(value), type::string);
-        }
-
-        boost::string_view name() const { return values[manager[_index].id]; }
-        boost::string_view value() const
-        {
-            return values[manager[_index].value];
-        }
-        type type() { return manager[_index].type; }
-
-        bool valid() const { return _is_valid; }
-
-        template <typename T> T convert() {}
-
-        class iterator {
-        public:
-            inline iterator(node_manager& manager,
-                std::vector<boost::string_view>& values,
-                std::list<std::string>& allocated_data, std::size_t node_index,
-                std::size_t child_index)
-                : manager(manager)
-                , values(values)
-                , allocated_data(allocated_data)
-                , _node_index(node_index)
-                , _child_index(child_index)
-            {
-            }
-
-            inline iterator operator++()
-            {
-                return iterator(manager, values, allocated_data, _node_index,
-                    _child_index++);
-            }
-
-            inline iterator operator++(int)
-            {
-                return iterator(manager, values, allocated_data, _node_index,
-                    _child_index++);
-            }
-
-            inline bool operator==(const iterator& rhs)
-            {
-                return (_node_index == rhs._node_index)
-                    && (_child_index == rhs._child_index);
-            }
-
-            inline bool operator!=(const iterator& rhs)
-            {
-                return !(*this == rhs);
-            }
-
-            inline node_view operator*()
-            {
-                node_ref nr
-                    = manager[manager[_node_index].children[_child_index]];
-                return node_view(nr.index, manager, values, allocated_data);
-            }
-
-        private:
-            node_manager& manager;
-            std::vector<boost::string_view>& values;
-            std::list<std::string>& allocated_data;
-            std::size_t _node_index;
-            std::size_t _child_index;
-        };
-
-        iterator begin()
-        {
-            return iterator(manager, values, allocated_data, _index, 0);
-        }
-
-        iterator end()
-        {
-            return iterator(manager, values, allocated_data, _index,
-                manager[_index].children.size());
-        }
-
-        std::size_t size() const { return manager[_index].children.size(); }
-
-    private:
-        std::size_t _index;
-        node_manager& manager;
-        std::vector<boost::string_view>& values;
-        std::list<std::string>& allocated_data;
-        bool _is_valid;
-
-        node_view add_node()
-        {
-            manager.emplace_back(node(0, 0, type::object));
-            std::size_t index = manager.size() - 1;
-            manager[_index].children.push_back(index);
-            return node_view(index, manager, values, allocated_data);
-        }
-
-        node_view add_node(
-            std::string&& name, std::string&& value, enum type type)
-        {
-            allocated_data.emplace_back(std::move(name));
-            values.emplace_back(boost::string_view(allocated_data.back()));
-            std::size_t name_index = values.size() - 1;
-
-            allocated_data.emplace_back(std::move(value));
-            values.emplace_back(boost::string_view(allocated_data.back()));
-            std::size_t value_index = values.size() - 1;
-
-            manager.emplace_back(node(name_index, value_index, type));
-            std::size_t index = manager.size() - 1;
-            manager[_index].children.push_back(index);
-            return node_view(index, manager, values, allocated_data);
-        }
-
-        node_view add_node(std::string&& name, enum type type)
-        {
-            allocated_data.emplace_back(std::move(name));
-            values.emplace_back(boost::string_view(allocated_data.back()));
-            std::size_t name_index = values.size() - 1;
-
-            manager.emplace_back(node(name_index, 0, type));
-            std::size_t index = manager.size() - 1;
-            manager[_index].children.push_back(index);
-            return node_view(index, manager, values, allocated_data);
-        }
-
-        node_view add_node(std::string&& value)
-        {
-            allocated_data.emplace_back(std::move(value));
-            values.emplace_back(boost::string_view(allocated_data.back()));
-            std::size_t value_index = values.size() - 1;
-
-            manager.emplace_back(node(0, value_index, type::number));
-            std::size_t index = manager.size() - 1;
-            manager[_index].children.push_back(index);
-            return node_view(index, manager, values, allocated_data);
-        }
-    };
-
-    template <> double node_view::convert()
-    {
-        return std::stod(value().to_string());
-    }
-
-    template <> int node_view::convert()
-    {
-        return std::stoi(value().to_string());
-    }
-
-    template <> float node_view::convert()
-    {
-        return std::stof(value().to_string());
-    }
-
-    template <> bool node_view::convert() { return value()[0] == 't'; }
-
-    template <> std::string node_view::convert() { return value().to_string(); }
-
-    file_dimension get_file_dimension_from_size(std::size_t size)
-    {
-        if (size < fds_tiny) {
-            return file_dimension::tiny;
-        } else if (size < fds_small) {
-            return file_dimension::small;
-        } else if (size < fds_medium) {
-            return file_dimension::medium;
-        } else if (size < fds_big) {
-            return file_dimension::big;
-        }
-
-        return file_dimension::huge;
-    }
-
-    std::size_t get_reserve_size_from_dimension(file_dimension fs)
-    {
-        switch (fs) {
-        case file_dimension::tiny:
-            return fdr_tiny;
-        case file_dimension::small:
-            return fdr_small;
-        case file_dimension::medium:
-            return fdr_medium;
-        case file_dimension::big:
-            return fdr_big;
-        case file_dimension::huge:
-            return fdr_huge;
-        }
-    }
-
-    std::size_t get_top_level_reserve_size_from_dimension(file_dimension fs)
-    {
-        switch (fs) {
-        case file_dimension::tiny:
-            return fdtlr_tiny;
-        case file_dimension::small:
-            return fdtlr_small;
-        case file_dimension::medium:
-            return fdtlr_medium;
-        case file_dimension::big:
-            return fdtlr_big;
-        case file_dimension::huge:
-            return fdtlr_huge;
-        }
-    }
-
     class document {
     public:
         inline document()
         {
             _values.resize(2);
             _value_size = 1;
-            //            _allocated_data.reserve(100);
         }
 
         inline document(
@@ -518,11 +31,9 @@ namespace json {
                 file_dimension fs
                     = get_file_dimension_from_size(_file_buffer.size());
                 std::size_t reserve_size = get_reserve_size_from_dimension(fs);
-                std::size_t tl_reserve_size
-                    = get_top_level_reserve_size_from_dimension(fs);
                 _values.resize(reserve_size);
                 _value_size = 1;
-                _node_manager.reserve(reserved);
+                _node_manager.reserve(reserve_size);
 
                 parse();
                 return;
@@ -538,8 +49,6 @@ namespace json {
             : _file_buffer(file_buffer)
         {
             std::size_t reserve_size = get_reserve_size_from_dimension(fs);
-            std::size_t tl_reserve_size
-                = get_top_level_reserve_size_from_dimension(fs);
             _values.resize(reserve_size);
             _value_size = 1;
             _node_manager.reserve(reserve_size);
@@ -557,7 +66,6 @@ namespace json {
             std::size_t value_index = _values.size() - 1;
 
             _node_manager.emplace_back(node(name_index, value_index, type));
-            //            _top_level.push_back(_node_manager.size() - 1);
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -570,7 +78,6 @@ namespace json {
             std::size_t name_index = _values.size() - 1;
 
             _node_manager.emplace_back(node(name_index, 0, type::object));
-            //            _top_level.push_back(_node_manager.size() - 1);
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -583,7 +90,6 @@ namespace json {
             std::size_t name_index = _values.size() - 1;
 
             _node_manager.emplace_back(node(name_index, 0, type::array));
-            //            _top_level.push_back(_node_manager.size() - 1);
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -601,7 +107,6 @@ namespace json {
 
             _node_manager.emplace_back(
                 node(name_index, value_index, type::string));
-            //            _top_level.push_back(_node_manager.size() - 1);
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -619,22 +124,14 @@ namespace json {
 
             _node_manager.emplace_back(
                 node(name_index, value_index, type::number));
-            //            _top_level.push_back(_node_manager.size() - 1);
 
-            //            return _node_manager[_node_manager.size() - 1];
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
         }
 
-        node_view operator[](const std::string& name)
+        /// @todo Change to get root object.
+        node_view operator[](const std::string& /*name*/)
         {
-            // for (auto& k : _top_level) {
-            //                if (_values[_node_manager[k].id] == name) {
-            //                    return node_view(k, _node_manager, _values,
-            //                    _allocated_data);
-            //                }
-            //            }
-
             /// @todo special case.
             return node_view(0, _node_manager, _values, _allocated_data);
         }
@@ -642,7 +139,7 @@ namespace json {
         void parse()
         {
             fst::buffer_view<char> data = _file_buffer;
-            parse_data pdata = { data.data(), 0, 0, looking_for_id_begin };
+            parse_data pdata = { data.data(), 0, 0, looking_for_id_begin, {} };
             pdata.stack.reserve(10);
 
             for (std::size_t i = 0; i < data.size(); i++) {
@@ -739,7 +236,7 @@ namespace json {
                 data.push_back('{');
 
                 std::size_t last_element_index = n.children.size() - 1;
-                for (int i = 0; i < n.children.size(); i++) {
+                for (std::size_t i = 0; i < n.children.size(); i++) {
                     node_to_string(_node_manager[n.children[i]], data,
                         level + 1, i == last_element_index);
                 }
@@ -761,7 +258,7 @@ namespace json {
                 data.push_back('[');
 
                 std::size_t last_element_index = n.children.size() - 1;
-                for (int i = 0; i < n.children.size(); i++) {
+                for (std::size_t i = 0; i < n.children.size(); i++) {
                     node_to_string(_node_manager[n.children[i]], data,
                         level + 1, i == last_element_index);
                 }
@@ -831,15 +328,14 @@ namespace json {
                     data += ",";
                 }
             } break;
+
+            case type::error: {
+                /// @todo .... ????
+            }
             }
         }
 
-        void print()
-        {
-            //            for (auto& t : _top_level) {
-            print_node(_node_manager[0], 0);
-            //            }
-        }
+        void print() { print_node(_node_manager[0], 0); }
 
         void print_node(node_ref n, int level)
         {
@@ -862,26 +358,6 @@ namespace json {
                 std::cout << std::string(level * 4, ' ') << _values[n.id]
                           << " -> " << _values[n.value] << std::endl;
             }
-        }
-
-        template <typename T> void fill(T& st) const
-        {
-            //            for (auto& t : _top_level) {
-            //                auto n = _node_manager[t];
-            //
-            //                switch (n.type) {
-            //                case type::number: {
-            //                    adaptor::get<T, double>(st,
-            //                    _values[n.id].to_string())
-            //                        = std::stod(_values[n.value].to_string());
-            //                } break;
-            //                case type::string: {
-            //                    adaptor::get<T, std::string>(st,
-            //                    _values[n.id].to_string())
-            //                        = _values[n.value].to_string();
-            //                }
-            //                }
-            //            }
         }
 
     private:
@@ -940,15 +416,8 @@ namespace json {
             _value_size++;
         }
 
-        inline void add_node(
-            parse_data& pdata, node&& n)
+        inline void add_node(parse_data& pdata, node&& n)
         {
-            //            if (_node_manager.empty() || pdata.stack.empty()) {
-            //                _node_manager.emplace_back(std::move(n));
-            //                _top_level.push_back(_node_manager.size() - 1);
-            //                return;
-            //            }
-
             if (pdata.stack.empty()) {
                 _node_manager.emplace_back(std::move(n));
                 return;
@@ -959,8 +428,7 @@ namespace json {
                 _node_manager.size() - 1);
         }
 
-        inline node_ref get_current_node(
-            parse_data& pdata)
+        inline node_ref get_current_node(parse_data& pdata)
         {
             if (pdata.stack.empty()) {
                 std::size_t index = _node_manager.size() - 1;
@@ -972,8 +440,7 @@ namespace json {
             return _node_manager[index];
         }
 
-        inline void find_id_begin(
-            parse_data& pdata, std::size_t index, char c)
+        inline void find_id_begin(parse_data& pdata, std::size_t index, char c)
         {
             switch (c) {
             case '"': {
@@ -1032,8 +499,7 @@ namespace json {
             }
         }
 
-        inline void find_obj_type(
-            parse_data& pdata, std::size_t index, char c)
+        inline void find_obj_type(parse_data& pdata, std::size_t index, char c)
         {
             switch (c) {
             case '{': {
@@ -1094,7 +560,7 @@ namespace json {
         }
 
         inline void find_next_object(
-            parse_data& pdata, std::size_t index, char c)
+            parse_data& pdata, std::size_t /*index*/, char c)
         {
             switch (c) {
             case ',': {

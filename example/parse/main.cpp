@@ -5,23 +5,32 @@
 #include <stdlib.h>
 
 #include <bench_util/bench_util.h>
-#include <fst/json/json.h>
+#include <fst/json/document.h>
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/filereadstream.h>
 
-//#include "gason.h"
 #include <fst/print.h>
 #include <cstdio>
 
-
-int main(int argc, const char* argv[])
+int main()
 {
-    const char* filepath = RESOURCES_PATH "/multi.json";
-//    const char* filepath = RESOURCES_PATH "/canada.json";
-    
+    //    const char* filepath = RESOURCES_PATH "/multi.json";
+    const char* filepath = RESOURCES_PATH "/canada.json";
+
+    bench::start();
+    fst::file_buffer file2(filepath);
+    unsigned long kkk = 0;
+    for (int i = 0; i < 20; i++) {
+        for (auto& n : file2.content()) {
+            kkk += (int)n;
+        }
+    }
+
+    bench::stop("for loop");
+
     // rapidjson.
     {
         bench::start();
@@ -35,25 +44,13 @@ int main(int argc, const char* argv[])
         d.ParseStream(iss);
         bench::stop("rapidjson");
     }
-    
+
     bench::start();
     fst::file_buffer file(filepath);
     fst::json::document doc(file.content());
     bench::stop("parse");
-    
-    bench::start();
-    fst::file_buffer file2(filepath);
-    unsigned long kkk = 0;
-    for(int i = 0; i < 20; i++) {
-        for(auto& n : file2.content()) {
-            kkk += (int)n;
-        }
-    }
-    
-    bench::stop("for loop");
-    
-        std::cout << doc.to_string() << std::endl;
-    
-    
+
+    // std::cout << doc.to_string() << std::endl;
+
     return 0;
 }
