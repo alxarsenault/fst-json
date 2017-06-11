@@ -57,4 +57,5 @@ set_target_properties(fstJson PROPERTIES LINKER_LANGUAGE CXX)
 # Examples.
 if(BUILD_EXAMPLES)
 	add_subdirectory(example/parse)
+	add_subdirectory(example/read)
 endif(BUILD_EXAMPLES)

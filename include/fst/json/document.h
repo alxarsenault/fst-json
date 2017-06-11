@@ -17,37 +17,29 @@ namespace fst {
 namespace json {
     class document {
     public:
-        inline document()
-        {
-            _values.resize(2);
-            _value_size = 1;
-        }
+        inline document() { _values.resize(1); }
 
-        inline document(
-            fst::buffer_view<char> file_buffer, std::size_t reserved = 0)
+        inline document(fst::buffer_view<char> file_buffer, std::size_t reserved = 0)
             : _file_buffer(file_buffer)
         {
             if (reserved == 0) {
-                internal::file_dimension fs
-                    = internal::get_file_dimension_from_size(
-                        _file_buffer.size());
+                internal::file_dimension fs = internal::get_file_dimension_from_size(_file_buffer.size());
                 std::size_t reserve_size = get_reserve_size_from_dimension(fs);
-                _values.resize(reserve_size);
-                _value_size = 1;
+                _values.reserve(reserve_size);
+                _values.emplace_back(boost::string_view());
                 _node_manager.reserve(reserve_size);
 
                 parse();
                 return;
             }
 
-            _values.resize(reserved);
-            _value_size = 1;
+            _values.reserve(reserved);
+            _values.emplace_back(boost::string_view());
             _node_manager.reserve(reserved);
             parse();
         }
 
-        inline node_view add_node(
-            std::string&& name, std::string&& value, type type)
+        inline node_view add_node(std::string&& name, std::string&& value, type type)
         {
             _allocated_data.emplace_back(std::move(name));
             _values.emplace_back(boost::string_view(_allocated_data.back()));
@@ -57,8 +49,7 @@ namespace json {
             _values.emplace_back(boost::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
-            _node_manager.emplace_back(
-                internal::node(name_index, value_index, type));
+            _node_manager.emplace_back(internal::node(name_index, value_index, type));
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -70,8 +61,7 @@ namespace json {
             _values.emplace_back(boost::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
-            _node_manager.emplace_back(
-                internal::node(name_index, 0, type::object));
+            _node_manager.emplace_back(internal::node(name_index, 0, type::object));
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -83,15 +73,13 @@ namespace json {
             _values.emplace_back(boost::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
-            _node_manager.emplace_back(
-                internal::node(name_index, 0, type::array));
+            _node_manager.emplace_back(internal::node(name_index, 0, type::array));
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
         }
 
-        inline node_view add_string_node(
-            std::string&& name, std::string&& value)
+        inline node_view add_string_node(std::string&& name, std::string&& value)
         {
             _allocated_data.emplace_back(std::move(name));
             _values.emplace_back(boost::string_view(_allocated_data.back()));
@@ -101,8 +89,7 @@ namespace json {
             _values.emplace_back(boost::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
-            _node_manager.emplace_back(
-                internal::node(name_index, value_index, type::string));
+            _node_manager.emplace_back(internal::node(name_index, value_index, type::string));
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
@@ -118,19 +105,18 @@ namespace json {
             _values.emplace_back(boost::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
-            _node_manager.emplace_back(
-                internal::node(name_index, value_index, type::number));
+            _node_manager.emplace_back(internal::node(name_index, value_index, type::number));
 
             std::size_t index = _node_manager.size() - 1;
             return node_view(index, _node_manager, _values, _allocated_data);
         }
 
-        /// @todo Change to get root object.
-        inline node_view operator[](const std::string& /*name*/)
+        inline node_view operator[](const std::string& name)
         {
-            /// @todo special case.
-            return node_view(0, _node_manager, _values, _allocated_data);
+            return node_view(0, _node_manager, _values, _allocated_data)[name];
         }
+
+        inline node_view root() { return node_view(0, _node_manager, _values, _allocated_data); }
 
         void parse()
         {
@@ -142,65 +128,54 @@ namespace json {
                 switch (pdata.current_state) {
                 case looking_for_id_begin: {
                     go_to_next_char(data, i, [](char c) {
-                        return c == '"' || c == '-' || fst::ascii::is_digit(c)
-                            || c == '{' || c == 't' || c == 'f' || c == 'n'
-                            || c == '[';
+                        return c == '"' || c == '-' || fst::ascii::is_digit(c) || c == '{' || c == 't'
+                            || c == 'f' || c == 'n' || c == '[';
                     });
                     find_id_begin(pdata, i, data[i]);
                 } break;
 
                 case looking_for_id_end: {
                     go_to_next_char(data, i, [](char c) { return c == '"'; });
-                    add_value(boost::string_view(
-                        pdata.raw_data + pdata.begin, i - pdata.begin));
+                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
                     pdata.current_state = looking_for_obj_type;
-                    add_node(
-                        pdata, internal::node(_value_size - 1, 0, type::error));
+                    add_node(pdata, internal::node(_values.size() - 1, 0, type::error));
                 } break;
 
                 case looking_for_obj_type: {
                     go_to_next_char(data, i, [](char c) {
-                        return c == '{' || c == '"' || c == '[' || c == '-'
-                            || fst::ascii::is_digit(c) || c == 't' || c == 'f'
-                            || c == 'n';
+                        return c == '{' || c == '"' || c == '[' || c == '-' || fst::ascii::is_digit(c)
+                            || c == 't' || c == 'f' || c == 'n';
                     });
                     find_obj_type(pdata, i, data[i]);
                 } break;
 
                 case looking_for_string_value_end: {
                     go_to_next_char(data, i, [](char c) { return c == '"'; });
-                    add_value(boost::string_view(
-                        pdata.raw_data + pdata.begin, i - pdata.begin));
-                    get_current_node(pdata).value = _value_size - 1;
+                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                 } break;
 
                 case looking_for_next_object: {
-                    go_to_next_char(data, i, [](char c) {
-                        return c == ',' || c == '}' || c == '{' || c == ']';
-                    });
+                    go_to_next_char(
+                        data, i, [](char c) { return c == ',' || c == '}' || c == '{' || c == ']'; });
                     find_next_object(pdata, i, data[i]);
                 } break;
 
                 case looking_for_number_value_end: {
-                    go_to_next_char(data, i, [](char c) {
-                        return !fst::ascii::is_digit(c) && c != '.';
-                    });
-                    add_value(boost::string_view(
-                        pdata.raw_data + pdata.begin, i - pdata.begin));
-                    get_current_node(pdata).value = _value_size - 1;
+                    go_to_next_char(data, i, [](char c) { return !fst::ascii::is_digit(c) && c != '.'; });
+                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                     find_next_object(pdata, i, data[i]);
                 } break;
 
                 case looking_for_null_value_end:
                 case looking_for_bool_value_end: {
-                    go_to_next_char(data, i,
-                        [](char c) { return !fst::ascii::is_letter(c); });
+                    go_to_next_char(data, i, [](char c) { return !fst::ascii::is_letter(c); });
 
-                    add_value(boost::string_view(
-                        pdata.raw_data + pdata.begin, i - pdata.begin));
-                    get_current_node(pdata).value = _value_size - 1;
+                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                     find_next_object(pdata, i, data[i]);
                 } break;
@@ -219,8 +194,7 @@ namespace json {
             return data;
         }
 
-        void node_to_string(internal::node_const_ref n, std::string& data,
-            int level, bool is_last) const
+        void node_to_string(internal::node_const_ref n, std::string& data, int level, bool is_last) const
         {
             switch (n.type) {
             case type::object: {
@@ -234,8 +208,7 @@ namespace json {
 
                 std::size_t last_element_index = n.children.size() - 1;
                 for (std::size_t i = 0; i < n.children.size(); i++) {
-                    node_to_string(_node_manager[n.children[i]], data,
-                        level + 1, i == last_element_index);
+                    node_to_string(_node_manager[n.children[i]], data, level + 1, i == last_element_index);
                 }
 
                 data.push_back('}');
@@ -256,8 +229,7 @@ namespace json {
 
                 std::size_t last_element_index = n.children.size() - 1;
                 for (std::size_t i = 0; i < n.children.size(); i++) {
-                    node_to_string(_node_manager[n.children[i]], data,
-                        level + 1, i == last_element_index);
+                    node_to_string(_node_manager[n.children[i]], data, level + 1, i == last_element_index);
                 }
 
                 data.push_back(']');
@@ -337,30 +309,27 @@ namespace json {
         void print_node(internal::node_ref n, int level)
         {
             if (n.type == type::object) {
-                std::cout << std::string(level * 4, ' ') << _values[n.id]
-                          << std::endl;
+                std::cout << std::string(level * 4, ' ') << _values[n.id] << std::endl;
                 for (auto& k : n.children) {
                     print_node(_node_manager[k], level + 1);
                 }
             } else if (n.type == type::array) {
-                std::cout << std::string(level * 4, ' ') << _values[n.id]
-                          << std::endl;
+                std::cout << std::string(level * 4, ' ') << _values[n.id] << std::endl;
                 for (auto& k : n.children) {
                     print_node(_node_manager[k], level + 1);
                 }
             } else if (n.type == type::string) {
-                std::cout << std::string(level * 4, ' ') << _values[n.id]
-                          << " -> " << _values[n.value] << std::endl;
+                std::cout << std::string(level * 4, ' ') << _values[n.id] << " -> " << _values[n.value]
+                          << std::endl;
             } else if (n.type == type::number) {
-                std::cout << std::string(level * 4, ' ') << _values[n.id]
-                          << " -> " << _values[n.value] << std::endl;
+                std::cout << std::string(level * 4, ' ') << _values[n.id] << " -> " << _values[n.value]
+                          << std::endl;
             }
         }
 
     private:
         fst::buffer_view<char> _file_buffer;
         std::vector<boost::string_view> _values;
-        std::size_t _value_size;
         internal::node_manager _node_manager;
         std::list<std::string> _allocated_data;
 
@@ -384,15 +353,13 @@ namespace json {
         };
 
         template <typename Op>
-        inline static void go_to_next_char(
-            fst::buffer_view<char>& data, std::size_t& i, Op op)
+        inline static void go_to_next_char(fst::buffer_view<char>& data, std::size_t& i, Op op)
         {
             for (; !op(data[i]) && i < data.size(); i++) {
             }
         }
 
-        inline static void next_char(
-            fst::buffer_view<char>& data, std::size_t& i, const char* check)
+        inline static void next_char(fst::buffer_view<char>& data, std::size_t& i, const char* check)
         {
             char* r = std::strpbrk(&data[i], check);
             if (r == nullptr) {
@@ -403,16 +370,6 @@ namespace json {
             i += r - &data[i];
         }
 
-        inline void add_value(boost::string_view&& s)
-        {
-            if (_value_size >= _values.capacity()) {
-                _values.resize(_value_size * 2);
-            }
-
-            _values[_value_size] = std::move(s);
-            _value_size++;
-        }
-
         inline void add_node(parse_data& pdata, internal::node&& n)
         {
             if (pdata.stack.empty()) {
@@ -421,8 +378,7 @@ namespace json {
             }
 
             _node_manager.emplace_back(std::move(n));
-            _node_manager[pdata.stack.back()].children.push_back(
-                _node_manager.size() - 1);
+            _node_manager[pdata.stack.back()].children.push_back(_node_manager.size() - 1);
         }
 
         inline internal::node_ref get_current_node(parse_data& pdata)
@@ -432,8 +388,7 @@ namespace json {
                 return _node_manager[index];
             }
 
-            std::size_t index
-                = _node_manager[pdata.stack.back()].children.back();
+            std::size_t index = _node_manager[pdata.stack.back()].children.back();
             return _node_manager[index];
         }
 
@@ -556,8 +511,7 @@ namespace json {
             }
         }
 
-        inline void find_next_object(
-            parse_data& pdata, std::size_t /*index*/, char c)
+        inline void find_next_object(parse_data& pdata, std::size_t /*index*/, char c)
         {
             switch (c) {
             case ',': {
