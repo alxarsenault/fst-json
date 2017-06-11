@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fst/json/node_manager.h"
+#include "fst/json/internal/node_manager.h"
 #include <boost/utility/string_view.hpp>
 #include <vector>
 #include <list>
@@ -14,7 +14,7 @@ namespace json {
      */
     class node_view {
     public:
-        inline node_view(std::size_t index, node_manager& manager,
+        inline node_view(std::size_t index, internal::node_manager& manager,
             std::vector<boost::string_view>& values,
             std::list<std::string>& allocated_data, bool is_valid = true)
             : _index(index)
@@ -39,7 +39,8 @@ namespace json {
 
         inline node_view operator[](std::size_t child_index)
         {
-            node_ref nr = manager[manager[_index].children[child_index]];
+            internal::node_ref nr
+                = manager[manager[_index].children[child_index]];
             return node_view(nr.index, manager, values, allocated_data);
         }
 
@@ -101,7 +102,7 @@ namespace json {
 
         class iterator {
         public:
-            inline iterator(node_manager& manager,
+            inline iterator(internal::node_manager& manager,
                 std::vector<boost::string_view>& values,
                 std::list<std::string>& allocated_data, std::size_t node_index,
                 std::size_t child_index)
@@ -138,13 +139,13 @@ namespace json {
 
             inline node_view operator*()
             {
-                node_ref nr
+                internal::node_ref nr
                     = manager[manager[_node_index].children[_child_index]];
                 return node_view(nr.index, manager, values, allocated_data);
             }
 
         private:
-            node_manager& manager;
+            internal::node_manager& manager;
             std::vector<boost::string_view>& values;
             std::list<std::string>& allocated_data;
             std::size_t _node_index;
@@ -169,14 +170,14 @@ namespace json {
 
     private:
         std::size_t _index;
-        node_manager& manager;
+        internal::node_manager& manager;
         std::vector<boost::string_view>& values;
         std::list<std::string>& allocated_data;
         bool _is_valid;
 
         inline node_view add_node()
         {
-            manager.emplace_back(node(0, 0, type::object));
+            manager.emplace_back(internal::node(0, 0, type::object));
             std::size_t index = manager.size() - 1;
             manager[_index].children.push_back(index);
             return node_view(index, manager, values, allocated_data);
@@ -193,7 +194,7 @@ namespace json {
             values.emplace_back(boost::string_view(allocated_data.back()));
             std::size_t value_index = values.size() - 1;
 
-            manager.emplace_back(node(name_index, value_index, type));
+            manager.emplace_back(internal::node(name_index, value_index, type));
             std::size_t index = manager.size() - 1;
             manager[_index].children.push_back(index);
             return node_view(index, manager, values, allocated_data);
@@ -205,7 +206,7 @@ namespace json {
             values.emplace_back(boost::string_view(allocated_data.back()));
             std::size_t name_index = values.size() - 1;
 
-            manager.emplace_back(node(name_index, 0, type));
+            manager.emplace_back(internal::node(name_index, 0, type));
             std::size_t index = manager.size() - 1;
             manager[_index].children.push_back(index);
             return node_view(index, manager, values, allocated_data);
@@ -217,7 +218,7 @@ namespace json {
             values.emplace_back(boost::string_view(allocated_data.back()));
             std::size_t value_index = values.size() - 1;
 
-            manager.emplace_back(node(0, value_index, type::number));
+            manager.emplace_back(internal::node(0, value_index, type::number));
             std::size_t index = manager.size() - 1;
             manager[_index].children.push_back(index);
             return node_view(index, manager, values, allocated_data);
