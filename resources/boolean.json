@@ -1,0 +1,6 @@
+{
+	"menu1" : true,
+	"menu2" : 123,
+	"menu3" : null,
+	"menu4" : [true, false, null]
+}

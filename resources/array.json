@@ -1,0 +1,9 @@
+{
+	"menu" : [{"value" : 123}, {"value" : 345}],
+	"banana" : 123,
+	"johnQ" : "munch",
+	"ballon" : {
+		"bang" : 123
+	},
+	"number" : [1, 2, 3, 4, 5]
+}

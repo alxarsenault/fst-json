@@ -1,0 +1,9 @@
+{ "menu": {
+		"menu1": "file1",
+		"menu2": "file2"
+	},
+	"bang": {
+		"a": "abc",
+		"b": "def"
+	}
+}

@@ -1,0 +1,28 @@
+{
+	"menu" : {
+		"a0" : "123",
+		"a1" : "456",
+		"fruits" : {
+			"f0" : "1",
+			"f1" : "Apple"
+		},
+		"cars" : {
+			"f0" : "Honda",
+			"f1" : "Apple"
+		}
+	},
+	"Bang" : "alex",
+	"crops" : {
+		"test" : 123,
+		"cars" : {
+			"f0" : "Honda",
+			"f1" : "Apple",
+			"cars" : {
+				"f0" : "Honda",
+				"f1" : "Apple"
+			}
+		}
+	},
+	"Ballon" : 89.123,
+	"array_of_array" : [ [[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]] ]
+}
