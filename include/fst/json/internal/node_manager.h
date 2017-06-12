@@ -30,21 +30,21 @@ namespace json {
                 _node_children.emplace_back(std::move(n.children));
             }
 
-            inline internal::node_ref get(std::size_t index)
+            inline internal::node_ref node_at(std::size_t index)
             {
                 return internal::node_ref(
                     index, _node_id[index], _node_value[index], _node_type[index], _node_children[index]);
             }
 
-            inline internal::node_const_ref get(std::size_t index) const
+            inline internal::node_const_ref node_at(std::size_t index) const
             {
                 return internal::node_const_ref(
                     index, _node_id[index], _node_value[index], _node_type[index], _node_children[index]);
             }
 
-            inline internal::node_ref operator[](std::size_t index) { return get(index); }
+            inline internal::node_ref operator[](std::size_t index) { return node_at(index); }
 
-            inline internal::node_const_ref operator[](std::size_t index) const { return get(index); }
+            inline internal::node_const_ref operator[](std::size_t index) const { return node_at(index); }
 
             inline bool empty() const { return _node_id.size() == 0; }
 
@@ -81,7 +81,8 @@ namespace json {
             std::vector<std::size_t> _node_id;
             std::vector<std::size_t> _node_value;
             std::vector<type> _node_type;
-            std::vector<std::vector<std::size_t>> _node_children;
+            //            std::vector<std::vector<std::size_t>> _node_children;
+            std::vector<children_container> _node_children;
             std::vector<std::experimental::string_view> _data_values;
         };
     } // internal.
