@@ -25,25 +25,17 @@ namespace json {
 
             inline internal::node_ref get(std::size_t index)
             {
-                return internal::node_ref(index, id[index], value[index],
-                    type[index], children[index]);
+                return internal::node_ref(index, id[index], value[index], type[index], children[index]);
             }
 
             inline internal::node_const_ref get(std::size_t index) const
             {
-                return internal::node_const_ref(index, id[index], value[index],
-                    type[index], children[index]);
+                return internal::node_const_ref(index, id[index], value[index], type[index], children[index]);
             }
 
-            inline internal::node_ref operator[](std::size_t index)
-            {
-                return get(index);
-            }
+            inline internal::node_ref operator[](std::size_t index) { return get(index); }
 
-            inline internal::node_const_ref operator[](std::size_t index) const
-            {
-                return get(index);
-            }
+            inline internal::node_const_ref operator[](std::size_t index) const { return get(index); }
 
             inline bool empty() const { return id.size() == 0; }
 

@@ -17,9 +17,9 @@
 
 int main()
 {
-    //    const char* filepath = RESOURCES_PATH "/multi.json";
-    //    const char* filepath = RESOURCES_PATH "/canada.json";
-    const char* filepath = RESOURCES_PATH "/super.json";
+    const char* filepath = RESOURCES_PATH "/big.json";
+    //        const char* filepath = RESOURCES_PATH "/canada.json";
+    //    const char* filepath = RESOURCES_PATH "/super.json";
 
     bench::start();
     fst::file_buffer file2(filepath);
@@ -53,7 +53,8 @@ int main()
     fst::json::document doc(file.content());
     fstj = bench::stop("parse");
 
-    fst::print(fstj / rpj, "%");
+    fst::print("fst :", fstj / rpj, "%");
+    fst::print("rapidjson :", rpj / fstj, "%");
     // std::cout << doc.to_string() << std::endl;
 
     return 0;

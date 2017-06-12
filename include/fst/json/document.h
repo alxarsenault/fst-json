@@ -4,9 +4,10 @@
 #include <vector>
 #include <list>
 #include <cstring>
-#include <boost/utility/string_view.hpp>
+#include <experimental/string_view>
 
 #include <fst/ascii.h>
+#include <fst/print.h>
 #include "fst/file_buffer.h"
 
 #include "fst/json/internal/node_manager.h"
@@ -26,7 +27,7 @@ namespace json {
                 internal::file_dimension fs = internal::get_file_dimension_from_size(_file_buffer.size());
                 std::size_t reserve_size = get_reserve_size_from_dimension(fs);
                 _values.reserve(reserve_size);
-                _values.emplace_back(boost::string_view());
+                _values.emplace_back(std::experimental::string_view());
                 _node_manager.reserve(reserve_size);
 
                 parse();
@@ -34,7 +35,7 @@ namespace json {
             }
 
             _values.reserve(reserved);
-            _values.emplace_back(boost::string_view());
+            _values.emplace_back(std::experimental::string_view());
             _node_manager.reserve(reserved);
             parse();
         }
@@ -42,11 +43,11 @@ namespace json {
         inline node_view add_node(std::string&& name, std::string&& value, type type)
         {
             _allocated_data.emplace_back(std::move(name));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
             _allocated_data.emplace_back(std::move(value));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
             _node_manager.emplace_back(internal::node(name_index, value_index, type));
@@ -58,7 +59,7 @@ namespace json {
         inline node_view add_object_node(std::string&& name)
         {
             _allocated_data.emplace_back(std::move(name));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
             _node_manager.emplace_back(internal::node(name_index, 0, type::object));
@@ -70,7 +71,7 @@ namespace json {
         inline node_view add_array_node(std::string&& name)
         {
             _allocated_data.emplace_back(std::move(name));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
             _node_manager.emplace_back(internal::node(name_index, 0, type::array));
@@ -82,11 +83,11 @@ namespace json {
         inline node_view add_string_node(std::string&& name, std::string&& value)
         {
             _allocated_data.emplace_back(std::move(name));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
             _allocated_data.emplace_back(std::move(value));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
             _node_manager.emplace_back(internal::node(name_index, value_index, type::string));
@@ -98,11 +99,11 @@ namespace json {
         inline node_view add_number_node(std::string&& name, double value)
         {
             _allocated_data.emplace_back(std::move(name));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t name_index = _values.size() - 1;
 
             _allocated_data.emplace_back(std::to_string(value));
-            _values.emplace_back(boost::string_view(_allocated_data.back()));
+            _values.emplace_back(std::experimental::string_view(_allocated_data.back()));
             std::size_t value_index = _values.size() - 1;
 
             _node_manager.emplace_back(internal::node(name_index, value_index, type::number));
@@ -127,16 +128,20 @@ namespace json {
             for (std::size_t i = 0; i < data.size(); i++) {
                 switch (pdata.current_state) {
                 case looking_for_id_begin: {
+
+                    /// @todo Is this skip white space and endline ???
                     go_to_next_char(data, i, [](char c) {
                         return c == '"' || c == '-' || fst::ascii::is_digit(c) || c == '{' || c == 't'
                             || c == 'f' || c == 'n' || c == '[';
                     });
+
                     find_id_begin(pdata, i, data[i]);
                 } break;
 
                 case looking_for_id_end: {
                     go_to_next_char(data, i, [](char c) { return c == '"'; });
-                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    _values.emplace_back(
+                        std::experimental::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
                     pdata.current_state = looking_for_obj_type;
                     add_node(pdata, internal::node(_values.size() - 1, 0, type::error));
                 } break;
@@ -151,7 +156,8 @@ namespace json {
 
                 case looking_for_string_value_end: {
                     go_to_next_char(data, i, [](char c) { return c == '"'; });
-                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    _values.emplace_back(
+                        std::experimental::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
                     get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                 } break;
@@ -164,7 +170,10 @@ namespace json {
 
                 case looking_for_number_value_end: {
                     go_to_next_char(data, i, [](char c) { return !fst::ascii::is_digit(c) && c != '.'; });
-                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    /// @todo Are these the only possible char after a number and would it be faster?
+                    /// c == ' ' || c == ']' || c == '}' || c == ','
+                    _values.emplace_back(
+                        std::experimental::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
                     get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                     find_next_object(pdata, i, data[i]);
@@ -174,7 +183,8 @@ namespace json {
                 case looking_for_bool_value_end: {
                     go_to_next_char(data, i, [](char c) { return !fst::ascii::is_letter(c); });
 
-                    _values.emplace_back(boost::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
+                    _values.emplace_back(
+                        std::experimental::string_view(pdata.raw_data + pdata.begin, i - pdata.begin));
                     get_current_node(pdata).value = _values.size() - 1;
                     pdata.current_state = looking_for_next_object;
                     find_next_object(pdata, i, data[i]);
@@ -329,7 +339,7 @@ namespace json {
 
     private:
         fst::buffer_view<char> _file_buffer;
-        std::vector<boost::string_view> _values;
+        std::vector<std::experimental::string_view> _values;
         internal::node_manager _node_manager;
         std::list<std::string> _allocated_data;
 
@@ -359,18 +369,7 @@ namespace json {
             }
         }
 
-        inline static void next_char(fst::buffer_view<char>& data, std::size_t& i, const char* check)
-        {
-            char* r = std::strpbrk(&data[i], check);
-            if (r == nullptr) {
-                i = data.size();
-                return;
-            }
-
-            i += r - &data[i];
-        }
-
-        inline void add_node(parse_data& pdata, internal::node&& n)
+        inline void add_node(const parse_data& pdata, internal::node&& n)
         {
             if (pdata.stack.empty()) {
                 _node_manager.emplace_back(std::move(n));
@@ -381,15 +380,13 @@ namespace json {
             _node_manager[pdata.stack.back()].children.push_back(_node_manager.size() - 1);
         }
 
-        inline internal::node_ref get_current_node(parse_data& pdata)
+        inline internal::node_ref get_current_node(const parse_data& pdata)
         {
             if (pdata.stack.empty()) {
-                std::size_t index = _node_manager.size() - 1;
-                return _node_manager[index];
+                return _node_manager[_node_manager.size() - 1];
             }
 
-            std::size_t index = _node_manager[pdata.stack.back()].children.back();
-            return _node_manager[index];
+            return _node_manager[_node_manager[pdata.stack.back()].children.back()];
         }
 
         inline void find_id_begin(parse_data& pdata, std::size_t index, char c)
@@ -521,6 +518,7 @@ namespace json {
 
             case '}': {
                 pdata.current_state = looking_for_next_object;
+                // Calling pop_back on an empty container is undefined.
                 if (!pdata.stack.empty()) {
                     pdata.stack.pop_back();
                 }
@@ -534,6 +532,7 @@ namespace json {
 
             case ']': {
                 pdata.current_state = looking_for_next_object;
+                // Calling pop_back on an empty container is undefined.
                 if (!pdata.stack.empty()) {
                     pdata.stack.pop_back();
                 }
