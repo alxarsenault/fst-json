@@ -11,7 +11,6 @@
 #include <fst/file_buffer.h>
 
 #include "fst/json/internal/node_manager.h"
-#include "fst/json/internal/file_dimension.h"
 #include "fst/json/node_view.h"
 
 namespace fst {
@@ -20,7 +19,7 @@ namespace json {
     public:
         inline document();
 
-        inline document(fst::buffer_view<char> file_buffer, std::size_t reserved = 0);
+        inline document(fst::buffer_view<char> file_buffer);
 
         inline node_view add_node(std::string&& name, std::string&& value, type type);
 
@@ -90,18 +89,10 @@ namespace json {
 
     inline document::document() {}
 
-    inline document::document(fst::buffer_view<char> file_buffer, std::size_t reserved)
+    inline document::document(fst::buffer_view<char> file_buffer)
         : _file_buffer(file_buffer)
     {
-        if (reserved == 0) {
-            internal::file_dimension fs = internal::get_file_dimension_from_size(_file_buffer.size());
-            _node_manager.reserve(get_reserve_size_from_dimension(fs));
-
-            parse();
-            return;
-        }
-
-        _node_manager.reserve(reserved);
+        _node_manager.reserve(file_buffer.size() * 0.5);
         parse();
     }
 
@@ -470,7 +461,7 @@ namespace json {
         //// --------- ????????????????????????
         case '[': {
             pdata.current_state = looking_for_id_begin;
-            add_node(pdata, internal::node(0, 0, type::array, 50));
+            add_node(pdata, internal::node(0, 0, type::array));
             pdata.stack.push_back(_node_manager.last_node_index());
             return;
         }

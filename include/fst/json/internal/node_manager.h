@@ -20,6 +20,10 @@ namespace json {
                 _node_type.reserve(size);
                 _node_children.reserve(size);
                 _data_values.reserve(size);
+
+                //                for(auto& n : _node_children) {
+                //                    n.reserve(size);
+                //                }
             }
 
             inline void emplace_back(internal::node&& n)
@@ -27,7 +31,7 @@ namespace json {
                 _node_id.push_back(n.id);
                 _node_value.push_back(n.value);
                 _node_type.push_back(n.type);
-                _node_children.emplace_back(std::move(n.children));
+                _node_children.emplace_back(children_container());
             }
 
             inline internal::node_ref node_at(std::size_t index)
@@ -81,7 +85,6 @@ namespace json {
             std::vector<std::size_t> _node_id;
             std::vector<std::size_t> _node_value;
             std::vector<type> _node_type;
-            //            std::vector<std::vector<std::size_t>> _node_children;
             std::vector<children_container> _node_children;
             std::vector<std::experimental::string_view> _data_values;
         };

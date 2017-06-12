@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -13,12 +14,11 @@
 #include <rapidjson/filereadstream.h>
 
 #include <fst/print.h>
-#include <cstdio>
 
 int main()
 {
-    const char* filepath = RESOURCES_PATH "/big.json";
-    // const char* filepath = RESOURCES_PATH "/canada.json";
+    //    const char* filepath = RESOURCES_PATH "/big.json";
+    const char* filepath = RESOURCES_PATH "/canada.json";
     // const char* filepath = RESOURCES_PATH "/super.json";
 
     bench::start();

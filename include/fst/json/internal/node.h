@@ -1,30 +1,33 @@
 #pragma once
 
 #include "fst/json/types.h"
+#include <fst/vector.h>
 #include <vector>
+#include <list>
 
 namespace fst {
 namespace json {
     namespace internal {
-        typedef std::vector<std::size_t> children_container;
+        // template <typename T, std::size_t N = 8, bool Destruct = true, std::size_t ResizeMultiplicator = 2>
+        typedef fst::vector<std::size_t, 8, false, 4> children_container;
+        // typedef std::vector<std::size_t> children_container;
 
         /**
          * node.
          */
         struct node {
-            inline node(std::size_t id, std::size_t value, type type, std::size_t reserve_size = 0)
+            inline node(std::size_t id, std::size_t value, type type)
                 : id(id)
                 , value(value)
                 , type(type)
             {
-                if (reserve_size) {
-                    children.reserve(reserve_size);
-                }
+                //                if (reserve_size) {
+                //                    children.reserve(reserve_size);
+                //                }
             }
 
             inline node(node&& n)
-                : children(std::move(n.children))
-                , id(n.id)
+                : id(n.id)
                 , value(n.value)
                 , type(n.type)
             {
@@ -33,7 +36,6 @@ namespace json {
             node(const node&) = delete;
             node& operator=(const node&) = delete;
 
-            children_container children;
             std::size_t id;
             std::size_t value;
             type type;
