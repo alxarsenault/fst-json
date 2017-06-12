@@ -212,7 +212,7 @@ namespace json {
             case looking_for_string_value_end: {
                 go_to_next_char(data, i, [](char c) { return c == '"'; });
                 _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
-                get_current_node(pdata).value = _node_manager.last_value_index();
+                get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
             } break;
 
@@ -226,7 +226,7 @@ namespace json {
                 /// @todo Are these the only possible char after a number and would it be faster?
                 /// c == ' ' || c == ']' || c == '}' || c == ','
                 _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
-                get_current_node(pdata).value = _node_manager.last_value_index();
+                get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
                 find_next_object(pdata, i, data[i]);
             } break;
@@ -236,7 +236,7 @@ namespace json {
                 go_to_next_char(data, i, [](char c) { return !fst::ascii::is_letter(c); });
 
                 _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
-                get_current_node(pdata).value = _node_manager.last_value_index();
+                get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
                 find_next_object(pdata, i, data[i]);
             } break;
@@ -258,11 +258,11 @@ namespace json {
     void document::node_to_string(
         internal::node_const_ref n, std::string& data, int level, bool is_last) const
     {
-        switch (n.type) {
+        switch (static_cast<enum type>(n.node.type)) {
         case type::object: {
-            if (_node_manager.value_at(n.id).size()) {
+            if (_node_manager.value_at(n.node.id).size()) {
                 data.push_back('"');
-                data += _node_manager.value_at(n.id).to_string();
+                data += _node_manager.value_at(n.node.id).to_string();
                 data += "\":";
             }
 
@@ -281,9 +281,9 @@ namespace json {
         } break;
 
         case type::array: {
-            if (_node_manager.value_at(n.id).size()) {
+            if (_node_manager.value_at(n.node.id).size()) {
                 data.push_back('"');
-                data += _node_manager.value_at(n.id).to_string();
+                data += _node_manager.value_at(n.node.id).to_string();
                 data += "\":";
             }
 
@@ -302,14 +302,14 @@ namespace json {
         } break;
 
         case type::string: {
-            if (_node_manager.value_at(n.id).empty()) {
+            if (_node_manager.value_at(n.node.id).empty()) {
                 return;
             }
 
             data.push_back('"');
-            data += _node_manager.value_at(n.id).to_string();
+            data += _node_manager.value_at(n.node.id).to_string();
             data += "\":\"";
-            data += _node_manager.value_at(n.value).to_string();
+            data += _node_manager.value_at(n.node.value).to_string();
             data.push_back('"');
 
             if (!is_last) {
@@ -319,13 +319,13 @@ namespace json {
         } break;
 
         case type::number: {
-            if (!_node_manager.value_at(n.id).empty()) {
+            if (!_node_manager.value_at(n.node.id).empty()) {
                 data.push_back('"');
-                data += _node_manager.value_at(n.id).to_string();
+                data += _node_manager.value_at(n.node.id).to_string();
                 data += "\":";
             }
 
-            data += _node_manager.value_at(n.value).to_string();
+            data += _node_manager.value_at(n.node.value).to_string();
 
             if (!is_last) {
                 data += ",";
@@ -333,13 +333,13 @@ namespace json {
         } break;
 
         case type::boolean: {
-            if (!_node_manager.value_at(n.id).empty()) {
+            if (!_node_manager.value_at(n.node.id).empty()) {
                 data.push_back('"');
-                data += _node_manager.value_at(n.id).to_string();
+                data += _node_manager.value_at(n.node.id).to_string();
                 data += "\":";
             }
 
-            data += _node_manager.value_at(n.value).to_string();
+            data += _node_manager.value_at(n.node.value).to_string();
 
             if (!is_last) {
                 data += ",";
@@ -347,13 +347,13 @@ namespace json {
         } break;
 
         case type::null: {
-            if (!_node_manager.value_at(n.id).empty()) {
+            if (!_node_manager.value_at(n.node.id).empty()) {
                 data.push_back('"');
-                data += _node_manager.value_at(n.id).to_string();
+                data += _node_manager.value_at(n.node.id).to_string();
                 data += "\":";
             }
 
-            data += _node_manager.value_at(n.value).to_string();
+            data += _node_manager.value_at(n.node.value).to_string();
 
             if (!is_last) {
                 data += ",";
@@ -370,22 +370,22 @@ namespace json {
 
     void document::print_node(internal::node_ref n, int level)
     {
-        if (n.type == type::object) {
-            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.id) << std::endl;
+        if (static_cast<enum type>(n.node.type) == type::object) {
+            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.node.id) << std::endl;
             for (auto& k : n.children) {
                 print_node(_node_manager[k], level + 1);
             }
-        } else if (n.type == type::array) {
-            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.id) << std::endl;
+        } else if (static_cast<enum type>(n.node.type) == type::array) {
+            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.node.id) << std::endl;
             for (auto& k : n.children) {
                 print_node(_node_manager[k], level + 1);
             }
-        } else if (n.type == type::string) {
-            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.id) << " -> "
-                      << _node_manager.value_at(n.value) << std::endl;
-        } else if (n.type == type::number) {
-            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.id) << " -> "
-                      << _node_manager.value_at(n.value) << std::endl;
+        } else if (static_cast<enum type>(n.node.type) == type::string) {
+            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.node.id) << " -> "
+                      << _node_manager.value_at(n.node.value) << std::endl;
+        } else if (static_cast<enum type>(n.node.type) == type::number) {
+            std::cout << std::string(level * 4, ' ') << _node_manager.value_at(n.node.id) << " -> "
+                      << _node_manager.value_at(n.node.value) << std::endl;
         }
     }
 
@@ -473,14 +473,14 @@ namespace json {
         switch (c) {
         case '{': {
             internal::node_ref n = get_current_node(pdata);
-            n.type = type::object;
+            n.node.type = static_cast<std::size_t>(type::object);
             pdata.stack.push_back(n.index);
             pdata.current_state = looking_for_id_begin;
             return;
         }
 
         case '"': {
-            get_current_node(pdata).type = type::string;
+            get_current_node(pdata).node.type = static_cast<std::size_t>(type::string);
             pdata.begin = index + 1;
             pdata.current_state = looking_for_string_value_end;
             return;
@@ -488,7 +488,7 @@ namespace json {
 
         case '[': {
             internal::node_ref n = get_current_node(pdata);
-            n.type = type::array;
+            n.node.type = static_cast<std::size_t>(type::array);
             pdata.stack.push_back(n.index);
             pdata.current_state = looking_for_id_begin;
             return;
@@ -505,7 +505,7 @@ namespace json {
         case '7':
         case '8':
         case '9': {
-            get_current_node(pdata).type = type::number;
+            get_current_node(pdata).node.type = static_cast<std::size_t>(type::number);
             pdata.begin = index;
             pdata.current_state = looking_for_number_value_end;
             return;
@@ -513,14 +513,14 @@ namespace json {
 
         case 't':
         case 'f': {
-            get_current_node(pdata).type = type::boolean;
+            get_current_node(pdata).node.type = static_cast<std::size_t>(type::boolean);
             pdata.begin = index;
             pdata.current_state = looking_for_bool_value_end;
             return;
         }
 
         case 'n': {
-            get_current_node(pdata).type = type::null;
+            get_current_node(pdata).node.type = static_cast<std::size_t>(type::null);
             pdata.begin = index;
             pdata.current_state = looking_for_null_value_end;
             return;

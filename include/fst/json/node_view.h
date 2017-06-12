@@ -19,14 +19,14 @@ namespace json {
             : _index(index)
             , _manager(manager)
             , allocated_data(allocated_data)
-            , _is_valid(manager[index].type == type::error ? false : is_valid)
+        , _is_valid(manager[index].node.type == static_cast<std::size_t>(type::error) ? false : is_valid)
         {
         }
 
         inline node_view operator[](const std::string& name)
         {
             for (auto k : _manager[_index].children) {
-                if (_manager.values()[_manager[k].id] == name) {
+                if (_manager.values()[_manager[k].node.id] == name) {
                     return node_view(k, _manager, allocated_data);
                 }
             }
@@ -72,13 +72,13 @@ namespace json {
             return add_node(std::move(name), std::move(value), type::string);
         }
 
-        inline std::experimental::string_view name() const { return _manager.values()[_manager[_index].id]; }
+        inline std::experimental::string_view name() const { return _manager.values()[_manager[_index].node.id]; }
 
         inline std::experimental::string_view value() const
         {
-            return _manager.values()[_manager[_index].value];
+            return _manager.values()[_manager[_index].node.value];
         }
-        inline type type() { return _manager[_index].type; }
+        inline type type() { return static_cast<enum type>(_manager[_index].node.type); }
 
         inline bool valid() const { return _is_valid; }
 

@@ -12,6 +12,7 @@ namespace json {
         typedef fst::vector<std::size_t, 8, false, 4> children_container;
         // typedef std::vector<std::size_t> children_container;
 
+        
         /**
          * node.
          */
@@ -19,11 +20,8 @@ namespace json {
             inline node(std::size_t id, std::size_t value, type type)
                 : id(id)
                 , value(value)
-                , type(type)
+                , type(static_cast<std::size_t>(type))
             {
-                //                if (reserve_size) {
-                //                    children.reserve(reserve_size);
-                //                }
             }
 
             inline node(node&& n)
@@ -32,55 +30,53 @@ namespace json {
                 , type(n.type)
             {
             }
+            
+            inline node(const node& n)
+            : id(n.id)
+            , value(n.value)
+            , type(n.type)
+            {
+            }
 
-            node(const node&) = delete;
-            node& operator=(const node&) = delete;
+//            node(const node&) = delete;
+//            node& operator=(const node&) = delete;
 
-            std::size_t id;
-            std::size_t value;
-            type type;
+            std::size_t id : 29; // 536870912
+            std::size_t value : 32; // 4294967296
+            std::size_t type : 3; // 8
         };
 
         /**
          * node_ref.
          */
         struct node_ref {
-            inline node_ref(std::size_t index, std::size_t& id, std::size_t& value, type& type,
+            inline node_ref(std::size_t index, node& node,
                 children_container& children)
                 : index(index)
                 , children(children)
-                , id(id)
-                , value(value)
-                , type(type)
+                , node(node)
             {
             }
 
             std::size_t index;
             children_container& children;
-            std::size_t& id;
-            std::size_t& value;
-            type& type;
+            node& node;
         };
 
         /**
          * node_const_ref.
          */
         struct node_const_ref {
-            inline node_const_ref(std::size_t index, const std::size_t id, const std::size_t value,
-                const type type, const children_container& children)
+            inline node_const_ref(std::size_t index, node node, const children_container& children)
                 : index(index)
                 , children(children)
-                , id(id)
-                , value(value)
-                , type(type)
+                , node(node)
             {
             }
 
             std::size_t index;
             const children_container& children;
-            const std::size_t id;
-            const std::size_t value;
-            const type type;
+            node node;
         };
     } // internal.
 } // json.
