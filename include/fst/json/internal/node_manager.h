@@ -36,6 +36,13 @@ namespace json {
                 return internal::node_const_ref(index, _nodes[index], _node_children[index]);
             }
 
+            inline children_container& node_children_at(std::size_t index) { return _node_children[index]; }
+
+            inline const children_container& node_children_at(std::size_t index) const
+            {
+                return _node_children[index];
+            }
+
             inline internal::node_ref operator[](std::size_t index) { return node_at(index); }
 
             inline internal::node_const_ref operator[](std::size_t index) const { return node_at(index); }

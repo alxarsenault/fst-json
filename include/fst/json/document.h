@@ -62,11 +62,9 @@ namespace json {
         };
 
         struct parse_data {
-            const char* raw_data;
-            std::size_t begin;
-            std::size_t level;
-            state current_state;
             fst::vector<std::size_t, 10, false> stack;
+            std::size_t begin;
+            state current_state;
         };
 
         template <typename Op>
@@ -178,7 +176,7 @@ namespace json {
     void document::parse()
     {
         fst::buffer_view<char> data = _file_buffer;
-        parse_data pdata = { data.data(), 0, 0, looking_for_id_begin, {} };
+        parse_data pdata = { {}, 0, looking_for_id_begin };
         pdata.stack.reserve(10);
 
         for (std::size_t i = 0; i < data.size(); i++) {
@@ -197,7 +195,7 @@ namespace json {
 
             case looking_for_id_end: {
                 go_to_next_char(data, i, [](char c) { return c == '"'; });
-                _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
+                _node_manager.add_value(_file_buffer.begin() + pdata.begin, i - pdata.begin);
                 pdata.current_state = looking_for_obj_type;
                 add_node(pdata, internal::node(_node_manager.last_value_index(), 0, type::error));
             } break;
@@ -217,7 +215,7 @@ namespace json {
 
             case looking_for_string_value_end: {
                 go_to_next_char(data, i, [](char c) { return c == '"'; });
-                _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
+                _node_manager.add_value(_file_buffer.begin() + pdata.begin, i - pdata.begin);
                 get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
             } break;
@@ -231,7 +229,7 @@ namespace json {
                 go_to_next_char(data, i, [](char c) { return !fst::ascii::is_digit(c) && c != '.'; });
                 /// @todo Are these the only possible char after a number and would it be faster?
                 /// c == ' ' || c == ']' || c == '}' || c == ','
-                _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
+                _node_manager.add_value(_file_buffer.begin() + pdata.begin, i - pdata.begin);
                 get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
                 find_next_object(pdata, i, data[i]);
@@ -241,7 +239,7 @@ namespace json {
             case looking_for_bool_value_end: {
                 go_to_next_char(data, i, [](char c) { return !fst::ascii::is_letter(c); });
 
-                _node_manager.add_value(pdata.raw_data + pdata.begin, i - pdata.begin);
+                _node_manager.add_value(_file_buffer.begin() + pdata.begin, i - pdata.begin);
                 get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
                 find_next_object(pdata, i, data[i]);
@@ -403,7 +401,8 @@ namespace json {
         }
 
         _node_manager.emplace_back(std::move(n));
-        _node_manager[pdata.stack.back()].children.push_back(_node_manager.last_node_index());
+        //        _node_manager[pdata.stack.back()].children.push_back(_node_manager.last_node_index());
+        _node_manager.node_children_at(pdata.stack.back()).push_back(_node_manager.last_node_index());
     }
 
     inline internal::node_ref document::get_current_node(const parse_data& pdata)
@@ -412,7 +411,8 @@ namespace json {
             return _node_manager[_node_manager.last_node_index()];
         }
 
-        return _node_manager[_node_manager[pdata.stack.back()].children.back()];
+        //        return _node_manager[_node_manager[pdata.stack.back()].children.back()];
+        return _node_manager[_node_manager.node_children_at(pdata.stack.back()).back()];
     }
 
     inline void document::find_id_begin(parse_data& pdata, std::size_t index, char c)
