@@ -17,10 +17,10 @@
 
 int main()
 {
-//        const char* filepath = RESOURCES_PATH "/big.json";
-//    const char* filepath = RESOURCES_PATH "/catalog.json";
+    //        const char* filepath = RESOURCES_PATH "/big.json";
+    //    const char* filepath = RESOURCES_PATH "/catalog.json";
     const char* filepath = RESOURCES_PATH "/canada.json";
-//     const char* filepath = RESOURCES_PATH "/super.json";
+    //     const char* filepath = RESOURCES_PATH "/super.json";
 
     bench::start();
     fst::file_buffer file2(filepath);
@@ -32,7 +32,6 @@ int main()
     }
 
     bench::stop("for loop");
-
     double rpj;
     double fstj;
     // rapidjson.
@@ -50,13 +49,14 @@ int main()
     }
 
     bench::start();
+
     fst::file_buffer file(filepath);
     fst::json::document doc(file.content());
     fstj = bench::stop("parse");
 
     fst::print("fst :", fstj / rpj, "%");
     fst::print("rapidjson :", rpj / fstj, "%");
-    // std::cout << doc.to_string() << std::endl;
+    //     std::cout << doc.to_string() << std::endl;
 
     return 0;
 }

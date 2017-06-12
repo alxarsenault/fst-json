@@ -186,9 +186,10 @@ namespace json {
             case looking_for_id_begin: {
 
                 /// @todo Is this skip white space and endline ???
+                // c == '-' || fst::ascii::is_digit(c)
                 go_to_next_char(data, i, [](char c) {
-                    return c == '"' || c == '-' || fst::ascii::is_digit(c) || c == '{' || c == 't' || c == 'f'
-                        || c == 'n' || c == '[';
+                    return (c >= 45 && c <= '9') || c == '"' || c == '{' || c == 't' || c == 'f' || c == 'n'
+                        || c == '[';
                 });
 
                 find_id_begin(pdata, i, data[i]);
@@ -202,9 +203,14 @@ namespace json {
             } break;
 
             case looking_for_obj_type: {
+                //                go_to_next_char(data, i, [](char c) {
+                //                    return c == '{' || c == '"' || c == '[' || c == '-' ||
+                //                    fst::ascii::is_digit(c) || c == 't'
+                //                        || c == 'f' || c == 'n';
+                //                });
                 go_to_next_char(data, i, [](char c) {
-                    return c == '{' || c == '"' || c == '[' || c == '-' || fst::ascii::is_digit(c) || c == 't'
-                        || c == 'f' || c == 'n';
+                    return c == '{' || c == '"' || c == '[' || (c >= 45 && c <= '9') || c == 't' || c == 'f'
+                        || c == 'n';
                 });
                 find_obj_type(pdata, i, data[i]);
             } break;
