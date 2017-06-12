@@ -18,8 +18,8 @@
 int main()
 {
     const char* filepath = RESOURCES_PATH "/big.json";
-    //        const char* filepath = RESOURCES_PATH "/canada.json";
-    //    const char* filepath = RESOURCES_PATH "/super.json";
+    // const char* filepath = RESOURCES_PATH "/canada.json";
+    // const char* filepath = RESOURCES_PATH "/super.json";
 
     bench::start();
     fst::file_buffer file2(filepath);
