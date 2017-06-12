@@ -8,7 +8,7 @@
 
 #include <fst/ascii.h>
 #include <fst/print.h>
-#include "fst/file_buffer.h"
+#include <fst/file_buffer.h>
 
 #include "fst/json/internal/node_manager.h"
 #include "fst/json/internal/file_dimension.h"

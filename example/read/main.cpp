@@ -54,9 +54,10 @@ int main()
     }
     bench::stop("fst");
 
-    //    std::cout << doc["widget"]["window"]["title"].value() << std::endl;
-    //    std::cout << doc["widget"]["window"]["width"].convert<int>() << std::endl;
-    //    std::cout << doc["widget"]["window"]["height"].convert<int>() << std::endl;
-    //    std::cout << doc["widget"]["text"]["onMouseUp"].value() << std::endl;
+    std::cout << doc["widget"]["window"]["title"].value() << std::endl;
+    std::cout << doc["widget"]["window"]["width"].convert<int>() << std::endl;
+    std::cout << doc["widget"]["window"]["height"].convert<int>() << std::endl;
+    std::cout << doc["widget"]["text"]["onMouseUp"].value() << std::endl;
+
     return 0;
 }
