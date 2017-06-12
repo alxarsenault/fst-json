@@ -92,7 +92,7 @@ namespace json {
     inline document::document(fst::buffer_view<char> file_buffer)
         : _file_buffer(file_buffer)
     {
-        _node_manager.reserve(file_buffer.size() * 0.5);
+        _node_manager.reserve(file_buffer.size() * 0.25);
         parse();
     }
 

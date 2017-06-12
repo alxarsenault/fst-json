@@ -18,6 +18,7 @@
 int main()
 {
 //        const char* filepath = RESOURCES_PATH "/big.json";
+//    const char* filepath = RESOURCES_PATH "/catalog.json";
     const char* filepath = RESOURCES_PATH "/canada.json";
 //     const char* filepath = RESOURCES_PATH "/super.json";
 

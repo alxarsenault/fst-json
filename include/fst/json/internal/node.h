@@ -8,11 +8,8 @@
 namespace fst {
 namespace json {
     namespace internal {
-        // template <typename T, std::size_t N = 8, bool Destruct = true, std::size_t ResizeMultiplicator = 2>
-        typedef fst::vector<std::size_t, 8, false, 4> children_container;
-        // typedef std::vector<std::size_t> children_container;
+        typedef fst::vector<std::uint32_t, 4, false, 8> children_container;
 
-        
         /**
          * node.
          */
@@ -30,16 +27,13 @@ namespace json {
                 , type(n.type)
             {
             }
-            
+
             inline node(const node& n)
-            : id(n.id)
-            , value(n.value)
-            , type(n.type)
+                : id(n.id)
+                , value(n.value)
+                , type(n.type)
             {
             }
-
-//            node(const node&) = delete;
-//            node& operator=(const node&) = delete;
 
             std::size_t id : 29; // 536870912
             std::size_t value : 32; // 4294967296
@@ -50,8 +44,7 @@ namespace json {
          * node_ref.
          */
         struct node_ref {
-            inline node_ref(std::size_t index, node& node,
-                children_container& children)
+            inline node_ref(std::size_t index, node& node, children_container& children)
                 : index(index)
                 , children(children)
                 , node(node)
@@ -67,16 +60,17 @@ namespace json {
          * node_const_ref.
          */
         struct node_const_ref {
-            inline node_const_ref(std::size_t index, node node, const children_container& children)
+            inline node_const_ref(
+                const std::size_t index, const node node, const children_container& children)
                 : index(index)
                 , children(children)
                 , node(node)
             {
             }
 
-            std::size_t index;
+            const std::size_t index;
             const children_container& children;
-            node node;
+            const node node;
         };
     } // internal.
 } // json.
