@@ -66,7 +66,7 @@ namespace json {
             std::size_t begin;
             std::size_t level;
             state current_state;
-            std::vector<std::size_t> stack;
+            fst::vector<std::size_t, 10, false> stack;
         };
 
         template <typename Op>
