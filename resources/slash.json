@@ -1,0 +1,10 @@
+{
+	"menu": "file",
+	"menu2": "john/doé/burk",
+	"menu3": 123,
+	"menu4": {},
+	"menu5": "not empty",
+	"array": [[[[[["john"]]]]]],
+	"empty_string": "",
+	"empty_string_array": ["", "", ""]
+}

@@ -187,7 +187,7 @@ namespace json {
                 // c == '-' || fst::ascii::is_digit(c)
                 go_to_next_char(data, i, [](char c) {
                     return (c >= 45 && c <= '9') || c == '"' || c == '{' || c == 't' || c == 'f' || c == 'n'
-                        || c == '[';
+                        || c == '[' || c == '}' || c == ']';
                 });
 
                 find_id_begin(pdata, i, data[i]);
@@ -208,13 +208,26 @@ namespace json {
                 //                });
                 go_to_next_char(data, i, [](char c) {
                     return c == '{' || c == '"' || c == '[' || (c >= 45 && c <= '9') || c == 't' || c == 'f'
-                        || c == 'n';
+                        || c == 'n' || c == ',' || c == ']';
                 });
                 find_obj_type(pdata, i, data[i]);
             } break;
 
             case looking_for_string_value_end: {
                 go_to_next_char(data, i, [](char c) { return c == '"'; });
+                //                go_to_next_char(data, i, [](char c) { return c == '"' || c == '\\'; });
+                //                switch(data[i]) {
+                //                        case '"':
+                //                        _node_manager.add_value(_file_buffer.begin() + pdata.begin, i -
+                //                        pdata.begin);
+                //                        get_current_node(pdata).node.value =
+                //                        _node_manager.last_value_index();
+                //                        pdata.current_state = looking_for_next_object;
+                //                        break;
+                //                        case '\\':
+                //                        i++;
+                //                        break;
+                //                }
                 _node_manager.add_value(_file_buffer.begin() + pdata.begin, i - pdata.begin);
                 get_current_node(pdata).node.value = _node_manager.last_value_index();
                 pdata.current_state = looking_for_next_object;
@@ -307,6 +320,12 @@ namespace json {
 
         case type::string: {
             if (_node_manager.value_at(n.node.id).empty()) {
+                data.push_back('"');
+                data += _node_manager.value_at(n.node.value).to_string();
+                data.push_back('"');
+                if (!is_last) {
+                    data += ",";
+                }
                 return;
             }
 
@@ -366,6 +385,7 @@ namespace json {
 
         case type::error: {
             /// @todo .... ????
+            return;
         }
         }
     }
@@ -471,6 +491,26 @@ namespace json {
             pdata.stack.push_back(_node_manager.last_node_index());
             return;
         }
+
+        // Empty object.
+        case '}': {
+            pdata.current_state = looking_for_next_object;
+            // Calling pop_back on an empty container is undefined.
+            if (!pdata.stack.empty()) {
+                pdata.stack.pop_back();
+            }
+            return;
+        }
+
+        // Empty array.
+        case ']': {
+            pdata.current_state = looking_for_next_object;
+            // Calling pop_back on an empty container is undefined.
+            if (!pdata.stack.empty()) {
+                pdata.stack.pop_back();
+            }
+            return;
+        }
         }
     }
 
@@ -529,6 +569,32 @@ namespace json {
             get_current_node(pdata).node.type = static_cast<std::size_t>(type::null);
             pdata.begin = index;
             pdata.current_state = looking_for_null_value_end;
+            return;
+        }
+
+        /// ---- array string.
+
+        case ',': {
+            internal::node_ref nr = get_current_node(pdata);
+            nr.node.type = static_cast<std::size_t>(type::string);
+            nr.node.value = nr.node.id;
+            nr.node.id = 0;
+            pdata.begin = index;
+            pdata.current_state = looking_for_id_begin;
+            return;
+        }
+
+        /// ---- end of array string.
+        case ']': {
+            internal::node_ref nr = get_current_node(pdata);
+            nr.node.type = static_cast<std::size_t>(type::string);
+            nr.node.value = nr.node.id;
+            nr.node.id = 0;
+            pdata.begin = index + 1;
+            pdata.current_state = looking_for_id_begin;
+            if (!pdata.stack.empty()) {
+                pdata.stack.pop_back();
+            }
             return;
         }
         }

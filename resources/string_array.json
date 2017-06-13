@@ -1,3 +1,4 @@
 {
-	"string_array" : ["1", "2", "3"]
+	"string_array" : ["1", "2", "3"],
+	"string_array2" : ["1", "2", "3", {"george": "town"}]
 }
